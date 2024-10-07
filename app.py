@@ -15,7 +15,9 @@ import uvicorn
 import base64
 from datetime import datetime, timedelta
 import logging
+import json
 from DoubleParkingViolation import main
+
 @app.get("/health")
 def read_health():
     return {"status": "OK"}
