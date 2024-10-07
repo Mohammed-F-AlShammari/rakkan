@@ -5,6 +5,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, MetaData, Table, Column, String, insert, func, desc, extract, Integer, DateTime, LargeBinary, select, text
 from sqlalchemy.orm import sessionmaker, Session
+from google.oauth2 import service_account
+from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import storage
 from urllib.parse import quote_plus
 from pydantic import BaseModel
@@ -21,11 +23,44 @@ from DoubleParkingViolation import main
 
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "capstone-t5-6e8ba9f61a31.json"
 
-# Load the Google Cloud credentials from the environment variable
-google_credentials = json.loads(os.environ.get("GOOGLE_CLOUD_KEY", "{}"))
+# # Load the Google Cloud credentials from the environment variable
+# google_credentials = json.loads(os.environ.get("GOOGLE_CLOUD_KEY", "{}"))
 
-# Initialize Google Cloud Storage client with the credentials
-storage_client = storage.Client.from_service_account_info(google_credentials)
+# # Initialize Google Cloud Storage client with the credentials
+# storage_client = storage.Client.from_service_account_info(google_credentials)
+
+def initialize_google_client(client_class):
+    try:
+        # Try to load credentials from the GOOGLE_CLOUD_KEY environment variable
+        google_credentials_json = os.environ.get("GOOGLE_CLOUD_KEY")
+        if google_credentials_json:
+            google_credentials = json.loads(google_credentials_json)
+            return client_class.from_service_account_info(google_credentials)
+        
+        # If GOOGLE_CLOUD_KEY is not set, try using default credentials
+        return client_class()
+    
+    except json.JSONDecodeError:
+        logger.error("Error: GOOGLE_CLOUD_KEY environment variable is not valid JSON")
+    except DefaultCredentialsError:
+        logger.error("Error: Default credentials not found and GOOGLE_CLOUD_KEY not set or invalid")
+    except Exception as e:
+        logger.error(f"Error initializing Google client: {str(e)}")
+    
+    # If all attempts fail, return None
+    return None
+
+# Initialize Google Cloud Storage client
+storage_client = initialize_google_client(storage.Client)
+
+# Initialize Google Cloud Vision client
+vision_client = initialize_google_client(vision.ImageAnnotatorClient)
+
+if storage_client is None or vision_client is None:
+    logger.error("Failed to initialize Google Cloud clients. Please check your credentials.")
+    # You might want to raise an exception here or handle this error appropriately
+else:
+    logger.info("Google Cloud clients initialized successfully.")
 
 
 # Logging setup
@@ -127,12 +162,14 @@ def get_db():
 
 @app.on_event("startup")
 async def startup_event():
-    bucket = storage_client.bucket(bucket_name)
-    if bucket.exists():
-        print(f"Using existing bucket: {bucket_name}")
+    if storage_client is None:
+        logger.error("Google Cloud Storage client is not initialized. Application may not function correctly.")
     else:
-        print(f"Bucket {bucket_name} does not exist. Please create it manually or update the bucket name.")
-
+        bucket = storage_client.bucket(bucket_name)
+        if bucket.exists():
+            logger.info(f"Using existing bucket: {bucket_name}")
+        else:
+            logger.warning(f"Bucket {bucket_name} does not exist. Please create it manually or update the bucket name.")
 @app.get("/", response_class=HTMLResponse)
 async def read_home():
     with open("templates/home.html", "r") as f:
