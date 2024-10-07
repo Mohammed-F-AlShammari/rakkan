@@ -13,6 +13,8 @@ import json
 import time
 from sqlalchemy import create_engine, MetaData, Table, Column, DateTime, String , select , delete , LargeBinary
 from urllib.parse import quote_plus
+from google.oauth2 import service_account
+from google.auth.exceptions import DefaultCredentialsError
 
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "capstone-t5-6e8ba9f61a31.json"
 
@@ -176,11 +178,40 @@ def show_image(img, title):
 # with open(json_path, 'r') as file:
 #     config = json.load(file)
 # client = vision.ImageAnnotatorClient.from_service_account_json(json_path)
-# Load the Google Cloud credentials from the environment variable
-google_credentials = json.loads(os.environ.get("GOOGLE_CLOUD_KEY", "{}"))
+# # Load the Google Cloud credentials from the environment variable
+# google_credentials = json.loads(os.environ.get("GOOGLE_CLOUD_KEY", "{}"))
 
-# Initialize the Vision client using the credentials from the environment variable
-client = vision.ImageAnnotatorClient.from_service_account_info(google_credentials)
+# # Initialize the Vision client using the credentials from the environment variable
+# client = vision.ImageAnnotatorClient.from_service_account_info(google_credentials)
+def initialize_vision_client():
+    try:
+        # Try to load credentials from the GOOGLE_CLOUD_KEY environment variable
+        google_credentials_json = os.environ.get("GOOGLE_CLOUD_KEY")
+        if google_credentials_json:
+            google_credentials = json.loads(google_credentials_json)
+            return vision.ImageAnnotatorClient.from_service_account_info(google_credentials)
+        
+        # If GOOGLE_CLOUD_KEY is not set, try using default credentials
+        return vision.ImageAnnotatorClient()
+    
+    except json.JSONDecodeError:
+        print("Error: GOOGLE_CLOUD_KEY environment variable is not valid JSON")
+    except DefaultCredentialsError:
+        print("Error: Default credentials not found and GOOGLE_CLOUD_KEY not set or invalid")
+    except Exception as e:
+        print(f"Error initializing Vision client: {str(e)}")
+    
+    # If all attempts fail, return None
+    return None
+
+# Use the function to initialize the Vision client
+client = initialize_vision_client()
+
+if client is None:
+    print("Failed to initialize Google Cloud Vision client. Please check your credentials.")
+    # Here you might want to exit the application or handle the error appropriately
+else:
+    print("Google Cloud Vision client initialized successfully.")
 
 def detect_english_text(cropped_plate):
     success, encoded_image = cv2.imencode('.png', cropped_plate)
