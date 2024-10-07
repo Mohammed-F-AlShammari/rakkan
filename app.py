@@ -34,22 +34,25 @@ from google.cloud import vision
 
 # # Initialize Google Cloud Storage client with the credentials
 # storage_client = storage.Client.from_service_account_info(google_credentials)
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def initialize_google_client(client_class):
     try:
-        # Try to load credentials from the GOOGLE_CLOUD_KEY environment variable
-        google_credentials_json = os.environ.get("GOOGLE_CLOUD_KEY")
+        # Try to load credentials from the GOOGLE_APPLICATION_CREDENTIALS environment variable
+        google_credentials_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
         if google_credentials_json:
             google_credentials = json.loads(google_credentials_json)
             return client_class.from_service_account_info(google_credentials)
         
-        # If GOOGLE_CLOUD_KEY is not set, try using default credentials
+        # If GOOGLE_APPLICATION_CREDENTIALS is not set, try using default credentials
         return client_class()
     
     except json.JSONDecodeError:
-        logger.error("Error: GOOGLE_CLOUD_KEY environment variable is not valid JSON")
+        logger.error("Error: GOOGLE_APPLICATION_CREDENTIALS environment variable is not valid JSON")
     except DefaultCredentialsError:
-        logger.error("Error: Default credentials not found and GOOGLE_CLOUD_KEY not set or invalid")
+        logger.error("Error: Default credentials not found and GOOGLE_APPLICATION_CREDENTIALS not set or invalid")
     except Exception as e:
         logger.error(f"Error initializing Google client: {str(e)}")
     
@@ -67,8 +70,17 @@ if storage_client is None or vision_client is None:
     # You might want to raise an exception here or handle this error appropriately
 else:
     logger.info("Google Cloud clients initialized successfully.")
-
-
+    # You can add simple tests here to verify the clients are working
+    try:
+        # Test Storage client
+        buckets = list(storage_client.list_buckets())
+        logger.info(f"Successfully listed {len(buckets)} buckets.")
+        
+        # Test Vision client
+        features = vision.Feature.Type.__members__.keys()
+        logger.info(f"Supported Vision API features: {', '.join(features)}")
+    except Exception as e:
+        logger.error(f"Error testing Google Cloud clients: {str(e)}")
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
