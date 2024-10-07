@@ -16,12 +16,36 @@ from urllib.parse import quote_plus
 
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "capstone-t5-6e8ba9f61a31.json"
 
-# Load the Google Cloud credentials from the environment variable
-google_credentials = json.loads(os.environ.get("GOOGLE_CLOUD_KEY", "{}"))
 
-# Initialize Google Cloud Storage client with the credentials
-storage_client = storage.Client.from_service_account_info(google_credentials)
+def initialize_storage_client():
+    try:
+        # First, try to load credentials from the GOOGLE_CLOUD_KEY environment variable
+        google_credentials_json = os.environ.get("GOOGLE_CLOUD_KEY")
+        if google_credentials_json:
+            google_credentials = json.loads(google_credentials_json)
+            return storage.Client.from_service_account_info(google_credentials)
+        
+        # If GOOGLE_CLOUD_KEY is not set, try using default credentials
+        return storage.Client()
+    
+    except json.JSONDecodeError:
+        print("Error: GOOGLE_CLOUD_KEY environment variable is not valid JSON")
+    except DefaultCredentialsError:
+        print("Error: Default credentials not found and GOOGLE_CLOUD_KEY not set or invalid")
+    except Exception as e:
+        print(f"Error initializing storage client: {str(e)}")
+    
+    # If all attempts fail, return None
+    return None
 
+# Use the function to initialize the storage client
+storage_client = initialize_storage_client()
+
+if storage_client is None:
+    print("Failed to initialize Google Cloud Storage client. Please check your credentials.")
+    # Here you might want to exit the application or handle the error appropriately
+else:
+    print("Google Cloud Storage client initialized successfully.")
 
 def setup_database_connection():
     # Violations database
