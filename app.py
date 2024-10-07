@@ -18,10 +18,6 @@ import logging
 import json
 from DoubleParkingViolation import main
 
-@app.get("/health")
-def read_health():
-    return {"status": "OK"}
-
 
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "capstone-t5-6e8ba9f61a31.json"
 
@@ -37,6 +33,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+@app.get("/health")
+def read_health():
+    return {"status": "OK"}
 
 # Enable CORS
 app.add_middleware(
