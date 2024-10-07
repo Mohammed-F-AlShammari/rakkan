@@ -18,22 +18,26 @@ from google.auth.exceptions import DefaultCredentialsError
 
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "capstone-t5-6e8ba9f61a31.json"
 
+import os
+import json
+from google.cloud import storage
+from google.auth.exceptions import DefaultCredentialsError
 
 def initialize_storage_client():
     try:
-        # First, try to load credentials from the GOOGLE_CLOUD_KEY environment variable
-        google_credentials_json = os.environ.get("GOOGLE_CLOUD_KEY")
+        # First, try to load credentials from the GOOGLE_APPLICATION_CREDENTIALS environment variable
+        google_credentials_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
         if google_credentials_json:
             google_credentials = json.loads(google_credentials_json)
             return storage.Client.from_service_account_info(google_credentials)
         
-        # If GOOGLE_CLOUD_KEY is not set, try using default credentials
+        # If GOOGLE_APPLICATION_CREDENTIALS is not set, try using default credentials
         return storage.Client()
     
     except json.JSONDecodeError:
-        print("Error: GOOGLE_CLOUD_KEY environment variable is not valid JSON")
+        print("Error: GOOGLE_APPLICATION_CREDENTIALS environment variable is not valid JSON")
     except DefaultCredentialsError:
-        print("Error: Default credentials not found and GOOGLE_CLOUD_KEY not set or invalid")
+        print("Error: Default credentials not found and GOOGLE_APPLICATION_CREDENTIALS not set or invalid")
     except Exception as e:
         print(f"Error initializing storage client: {str(e)}")
     
@@ -48,7 +52,12 @@ if storage_client is None:
     # Here you might want to exit the application or handle the error appropriately
 else:
     print("Google Cloud Storage client initialized successfully.")
-
+    # You can now use storage_client to interact with Google Cloud Storage
+    try:
+        buckets = list(storage_client.list_buckets())
+        print(f"Successfully listed {len(buckets)} buckets.")
+    except Exception as e:
+        print(f"Error listing buckets: {str(e)}")
 def setup_database_connection():
     # Violations database
     violations_db_user = "postgres"
@@ -183,21 +192,22 @@ def show_image(img, title):
 
 # # Initialize the Vision client using the credentials from the environment variable
 # client = vision.ImageAnnotatorClient.from_service_account_info(google_credentials)
+
 def initialize_vision_client():
     try:
-        # Try to load credentials from the GOOGLE_CLOUD_KEY environment variable
-        google_credentials_json = os.environ.get("GOOGLE_CLOUD_KEY")
+        # Try to load credentials from the GOOGLE_APPLICATION_CREDENTIALS environment variable
+        google_credentials_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
         if google_credentials_json:
             google_credentials = json.loads(google_credentials_json)
             return vision.ImageAnnotatorClient.from_service_account_info(google_credentials)
         
-        # If GOOGLE_CLOUD_KEY is not set, try using default credentials
+        # If GOOGLE_APPLICATION_CREDENTIALS is not set, try using default credentials
         return vision.ImageAnnotatorClient()
     
     except json.JSONDecodeError:
-        print("Error: GOOGLE_CLOUD_KEY environment variable is not valid JSON")
+        print("Error: GOOGLE_APPLICATION_CREDENTIALS environment variable is not valid JSON")
     except DefaultCredentialsError:
-        print("Error: Default credentials not found and GOOGLE_CLOUD_KEY not set or invalid")
+        print("Error: Default credentials not found and GOOGLE_APPLICATION_CREDENTIALS not set or invalid")
     except Exception as e:
         print(f"Error initializing Vision client: {str(e)}")
     
@@ -212,7 +222,13 @@ if client is None:
     # Here you might want to exit the application or handle the error appropriately
 else:
     print("Google Cloud Vision client initialized successfully.")
-
+    # You can add a simple test here to verify the client is working
+    try:
+        # Perform a simple operation, like listing supported features
+        features = vision.Feature.Type.__members__.keys()
+        print(f"Supported Vision API features: {', '.join(features)}")
+    except Exception as e:
+        print(f"Error testing Vision client: {str(e)}")
 def detect_english_text(cropped_plate):
     success, encoded_image = cv2.imencode('.png', cropped_plate)
     content = encoded_image.tobytes()
