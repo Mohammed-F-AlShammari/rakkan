@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 import logging
 import json
 from DoubleParkingViolation import main
-
+from google.cloud import vision
 
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "capstone-t5-6e8ba9f61a31.json"
 
