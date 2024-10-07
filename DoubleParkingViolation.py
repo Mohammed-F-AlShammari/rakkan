@@ -7,6 +7,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from google.cloud import vision
+from google.cloud import storage
 import io
 import json
 import time
